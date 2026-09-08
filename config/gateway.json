@@ -1,0 +1,12 @@
+{
+  "deviceId": "counter-01",
+  "roomId": "room-01",
+  "mode": "http",
+  "host": "127.0.0.1",
+  "port": 8080,
+  "authTokenEnv": "",
+  "publishIntervalMs": 1000,
+  "staleAfterMs": 5000,
+  "initialCount": 0,
+  "scenario": "demo"
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fit-Ai-IoT RoomState v1",
+  "type": "object",
+  "required": ["schemaVersion", "deviceId", "roomId", "sessionId", "sequence", "count", "event", "timestamp", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "deviceId": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,128}$"},
+    "roomId": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,128}$"},
+    "sessionId": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,128}$"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "count": {"type": "integer", "minimum": 0, "maximum": 4294967295},
+    "event": {"enum": ["entry", "exit", "ambiguous", "none"]},
+    "timestamp": {"type": "integer", "minimum": 0},
+    "status": {"enum": ["valid", "uncertain"]},
+    "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+  }
+}
