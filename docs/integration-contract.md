@@ -80,6 +80,9 @@ Subsequent exit:
   `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`.
   It reads an atomic latest-state cache; slow/disconnected clients do not block
   the counting process. No write endpoint or CORS configuration is provided.
+- Health: `GET /health` returns 200 `{"status":"ok"}` while the HTTP server is
+  running. It does not certify that the producer is fresh: use `/v1/state` for
+  that. If Bearer authentication is configured, it applies to both endpoints.
 - Console: one identical JSON object per stdout line (NDJSON). Human-readable
   `ENTRY count=1` diagnostics go to stderr. The HTTP adapter consumes this stream.
 - MQTT is not implemented or required. A future publisher can carry the same
@@ -146,6 +149,12 @@ curl.exe --fail http://127.0.0.1:8080/v1/state
 Unix uses `curl` in place of `curl.exe`. For another device on your LAN, set host
 to the appropriate interface or `0.0.0.0` and use the laptop's LAN IP in the app;
 localhost on a phone refers to the phone. Configure the host firewall as needed.
+The checked-in development config binds to `0.0.0.0`; change `host` to
+`127.0.0.1` for laptop-only access. Run `--scenario slow-demo` to expose
+`0 → 1 → 2 → 3 → 2 → 3` for app polling. This uses actual RoomState updates
+from the simulator and counter, with four seconds of scripted clear frames
+between crossings. Wall time varies with the host scheduler (about 30 seconds
+on the tested Windows laptop).
 
 `config/gateway.json` selects deviceId, roomId, mode (`http`/`console`), bind host,
 port, initialCount, scenario, publishIntervalMs and staleAfterMs. This HTTP option

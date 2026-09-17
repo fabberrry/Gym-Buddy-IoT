@@ -2,6 +2,7 @@
 import argparse
 import hmac
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -13,6 +14,33 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = Path(__file__).resolve().parents[1]
+
+ROOM_FIELDS = {"schemaVersion", "deviceId", "roomId", "sessionId", "sequence",
+               "count", "event", "timestamp", "status"}
+ROOM_IDENTIFIER = re.compile(r"[A-Za-z0-9._:-]{1,128}\Z")
+
+
+def validate_room_state(state):
+    """Fail closed before an untrusted producer line reaches HTTP clients."""
+    if not isinstance(state, dict) or not ROOM_FIELDS <= state.keys() or not state.keys() <= ROOM_FIELDS | {"confidence"}:
+        raise ValueError("Invalid RoomState fields")
+    if type(state["schemaVersion"]) is not int or state["schemaVersion"] != 1:
+        raise ValueError("Invalid RoomState version")
+    for key in ("deviceId", "roomId", "sessionId"):
+        if not isinstance(state[key], str) or not ROOM_IDENTIFIER.fullmatch(state[key]):
+            raise ValueError("Invalid RoomState identity")
+    for key, maximum in (("sequence", None), ("count", 4294967295), ("timestamp", None)):
+        value = state[key]
+        if type(value) is not int or value < 0 or (maximum is not None and value > maximum):
+            raise ValueError("Invalid RoomState " + key)
+    if state["event"] not in ("entry", "exit", "ambiguous", "none") or type(state["event"]) is not str:
+        raise ValueError("Invalid RoomState event")
+    if state["status"] not in ("valid", "uncertain") or type(state["status"]) is not str:
+        raise ValueError("Invalid RoomState status")
+    confidence = state.get("confidence")
+    if confidence is not None and (type(confidence) not in (int, float) or
+                                   not math.isfinite(confidence) or not 0 <= confidence <= 1):
+        raise ValueError("Invalid RoomState confidence")
 
 
 def load_config(path):
@@ -48,6 +76,7 @@ class LatestState:
 
     def publish(self, state):
         # Snapshot replacement is atomic and independent of slow HTTP consumers.
+        validate_room_state(state)
         payload = json.dumps(state, separators=(",", ":"), allow_nan=False).encode("utf-8")
         with self.lock:
             self.payload = payload

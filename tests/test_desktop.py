@@ -58,7 +58,9 @@ class Integration(unittest.TestCase):
         expected = {"empty": (0, []), "entry": (1, ["ENTRY count=1"]),
                     "exit": (0, ["EXIT count=0"]), "entries": (3, ["ENTRY count=1", "ENTRY count=2", "ENTRY count=3"]),
                     "exits": (0, ["EXIT count=0"] * 3), "noise": (1, ["ENTRY count=1"]),
-                    "demo": (1, ["ENTRY count=1", "ENTRY count=2", "AMBIGUOUS count=2", "EXIT count=1"])}
+                    "demo": (1, ["ENTRY count=1", "ENTRY count=2", "AMBIGUOUS count=2", "EXIT count=1"]),
+                    "slow-demo": (3, ["ENTRY count=1", "ENTRY count=2", "ENTRY count=3",
+                                      "EXIT count=2", "ENTRY count=3"])}
         for name in ("close-following", "reversal", "blockage", "overlap", "invalid"):
             expected[name] = (0, ["AMBIGUOUS count=0"])
         for name, (count, events) in expected.items():
@@ -69,8 +71,41 @@ class Integration(unittest.TestCase):
         states, _ = self.run_scenario("exit", 4)
         self.assertEqual(states[-1]["count"], 3)
 
+    def test_slow_demo_exposes_each_absolute_count(self):
+        states, _ = self.run_scenario("slow-demo")
+        changes = [state["count"] for index, state in enumerate(states)
+                   if index == 0 or state["count"] != states[index - 1]["count"]]
+        self.assertEqual(changes, [0, 1, 2, 3, 2, 3])
+        self.assertTrue(all(a["sequence"] < b["sequence"] for a, b in zip(states, states[1:])))
+
     def test_deterministic_json(self):
         self.assertEqual(self.run_scenario("demo"), self.run_scenario("demo"))
+
+    def test_session_id_is_stable_within_process_and_unique_across_starts(self):
+        def run_default():
+            result = subprocess.run([str(BINARY), "--scenario", "demo", "--epoch-ms", "1725800000000"],
+                                    capture_output=True, text=True, check=True, timeout=10)
+            states = [json.loads(line) for line in result.stdout.splitlines()]
+            for state in states:
+                validate(state)
+            return states
+
+        first_states = run_default()
+        second_states = run_default()
+        self.assertTrue(first_states)
+        self.assertTrue(second_states)
+        self.assertTrue(all(state["sessionId"] == first_states[0]["sessionId"] for state in first_states))
+        self.assertTrue(all(state["sessionId"] == second_states[0]["sessionId"] for state in second_states))
+        self.assertNotEqual(first_states[0]["sessionId"], second_states[0]["sessionId"])
+
+    def test_explicit_session_id_is_preserved(self):
+        result = subprocess.run([str(BINARY), "--scenario", "demo", "--epoch-ms", "1725800000000",
+                                 "--session-id", "fixture"], capture_output=True, text=True, check=True, timeout=10)
+        states = [json.loads(line) for line in result.stdout.splitlines()]
+        for state in states:
+            validate(state)
+        self.assertTrue(states)
+        self.assertTrue(all(state["sessionId"] == "fixture" for state in states))
 
     def test_invalid_cli(self):
         for args in (["--scenario", "bogus"], ["--initial-count", "-1"],
@@ -101,6 +136,18 @@ class Integration(unittest.TestCase):
             server.shutdown()
             server.server_close()
             worker.join()
+
+    def test_malformed_state_is_not_published(self):
+        states, _ = self.run_scenario("entry")
+        store = gateway.LatestState(5000)
+        store.publish(states[0])
+        original = store.read()
+        for bad in (dict(states[0], count=-1), dict(states[0], status="ok"),
+                    dict(states[0], sequence=True),
+                    {key: value for key, value in states[0].items() if key != "roomId"}):
+            with self.assertRaises(ValueError):
+                store.publish(bad)
+            self.assertEqual(store.read(), original)
 
     def test_http_reconnect_auth_stale_and_source_failure(self):
         states, _ = self.run_scenario("demo")
