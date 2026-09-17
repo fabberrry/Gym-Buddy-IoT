@@ -96,6 +96,8 @@ class Integration(unittest.TestCase):
         self.assertTrue(second_states)
         self.assertTrue(all(state["sessionId"] == first_states[0]["sessionId"] for state in first_states))
         self.assertTrue(all(state["sessionId"] == second_states[0]["sessionId"] for state in second_states))
+        self.assertTrue(all(a["sequence"] < b["sequence"] for a, b in zip(first_states, first_states[1:])))
+        self.assertTrue(all(a["sequence"] < b["sequence"] for a, b in zip(second_states, second_states[1:])))
         self.assertNotEqual(first_states[0]["sessionId"], second_states[0]["sessionId"])
 
     def test_explicit_session_id_is_preserved(self):

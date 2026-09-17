@@ -18,7 +18,7 @@ namespace
     std::string uniqueSessionId()
     {
         const auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             std::chrono::steady_clock::now().time_since_epoch())
+                             std::chrono::system_clock::now().time_since_epoch())
                              .count();
         std::random_device rng;
         const auto random = (static_cast<std::uint64_t>(rng()) << 32) ^ static_cast<std::uint64_t>(rng());
