@@ -46,6 +46,15 @@ Start real-time HTTP integration, then query from another terminal:
 ```powershell
 python desktop/people_counter_gateway.py
 curl.exe --fail http://127.0.0.1:8080/v1/state
+curl.exe --fail http://127.0.0.1:8080/health
+```
+
+For Android development on the same Wi-Fi, keep the default bind host at `0.0.0.0`
+and access the laptop using the LAN IP from the phone or emulator:
+
+```text
+http://10.0.2.2:8080/v1/state     # Android Emulator on the same PC
+http://<PC_LAN_IP>:8080/v1/state  # physical Android device on same Wi-Fi
 ```
 
 On Unix use ./build/people_counter_gateway and curl. Ctrl+C stops the HTTP gateway.
@@ -54,7 +63,18 @@ After its traffic scenario it keeps publishing clear-room heartbeats.
 Example final payload (session, timestamp and sequence vary):
 
 ```json
-{"schemaVersion":1,"deviceId":"counter-01","roomId":"room-01","sessionId":"demo-1","sequence":5,"count":1,"event":"exit","timestamp":1725800001920,"status":"uncertain","confidence":null}
+{
+  "schemaVersion": 1,
+  "deviceId": "counter-01",
+  "roomId": "room-01",
+  "sessionId": "demo-1",
+  "sequence": 5,
+  "count": 1,
+  "event": "exit",
+  "timestamp": 1725800001920,
+  "status": "uncertain",
+  "confidence": null
+}
 ```
 
 [config/gateway.json](config/gateway.json) configures identities, HTTP/console mode,

@@ -79,6 +79,7 @@ class Integration(unittest.TestCase):
 
     def test_configuration(self):
         config = gateway.load_config(ROOT / "config/gateway.json")
+        self.assertEqual(config["host"], "0.0.0.0")
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "bad.json"
             for key, value in (("port", -1), ("mode", "mqtt"), ("deviceId", ""), ("initialCount", True)):
@@ -86,6 +87,20 @@ class Integration(unittest.TestCase):
                 path.write_text(json.dumps(bad))
                 with self.assertRaises(ValueError):
                     gateway.load_config(path)
+
+    def test_health_endpoint(self):
+        store = gateway.LatestState(5000)
+        server = gateway.ThreadingHTTPServer(("127.0.0.1", 0), gateway.handler_for(store, ""))
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{server.server_port}/health", timeout=2) as response:
+                self.assertEqual(response.status, 200)
+                self.assertEqual(json.load(response), {"status": "ok"})
+        finally:
+            server.shutdown()
+            server.server_close()
+            worker.join()
 
     def test_http_reconnect_auth_stale_and_source_failure(self):
         states, _ = self.run_scenario("demo")

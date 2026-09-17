@@ -93,6 +93,8 @@ def handler_for(store, token=""):
             supplied = self.headers.get("Authorization", "").encode("utf-8")
             if token and not hmac.compare_digest(supplied, ("Bearer " + token).encode("utf-8")):
                 self.reply(401, b'{"error":"unauthorized"}')
+            elif self.path == "/health":
+                self.reply(200, b'{"status":"ok"}')
             elif self.path != "/v1/state":
                 self.reply(404, b'{"error":"not_found"}')
             else:
