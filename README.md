@@ -60,6 +60,17 @@ http://<PC_LAN_IP>:8080/v1/state  # physical Android device on same Wi-Fi
 On Unix use ./build/people_counter_gateway and curl. Ctrl+C stops the HTTP gateway.
 After its traffic scenario it keeps publishing clear-room heartbeats.
 
+For a paced Android demo with four seconds of scripted clear frames between
+crossings (about 30 seconds total on the tested Windows laptop):
+
+```powershell
+python desktop/people_counter_gateway.py --scenario slow-demo
+```
+
+The count follows `0 → 1 → 2 → 3 → 2 → 3`, using the same C++ counting pipeline
+as every other scenario. In another terminal, poll `/v1/state` repeatedly or
+leave Gym-Buddy's Home screen open. `demo` remains the quick scenario.
+
 Example final payload (session, timestamp and sequence vary):
 
 ```json
@@ -82,7 +93,7 @@ bind host/port, token environment-variable name, initial count and publish/stale
 intervals. No hardcoded credentials or MQTT dependency.
 
 Scenarios: empty, entry, exit, entries, exits, close-following, reversal, blockage,
-overlap, noise, invalid, demo.
+overlap, noise, invalid, demo, slow-demo.
 
 ```powershell
 python desktop/people_counter_gateway.py --scenario reversal --once

@@ -28,6 +28,13 @@ inline std::vector<doorway::SensorFrame> scenario(const std::string& name) {
     else if(name=="noise") { hold(1,10); hold(0,10); hold(1,10); hold(0,30); entry(); }
     else if(name=="invalid") { hold(4,10); hold(0,200); }
     else if(name=="demo") { entry(); entry(); overlap(); leave(); }
+    else if(name=="slow-demo") {
+        entry(); hold(0,4000);
+        entry(); hold(0,4000);
+        entry(); hold(0,4000);
+        leave(); hold(0,4000);
+        entry();
+    }
     else throw std::invalid_argument("Unknown scenario: "+name);
     return frames;
 }
